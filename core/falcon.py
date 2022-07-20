@@ -1,8 +1,7 @@
 from typing import Dict, List
 
-# from core.defines import RGBA
-from pydantic.color import RGBA
-
+from core.defines import RGBA
+import pyfpng as fpng
 from core.enums import PlaneType, ShadingType
 
 

@@ -1,15 +1,17 @@
 import math
+import SimpleITK as sitk
 
-import pyfpng as fpng
 from common.stopwatch import stopwatch
+from core.defines import RGBA
 from core.direction import Direction3
 from core.point import Point3
 
 
-class Dataset:
+class Datasets:
     def __init__(self):
         self.volume = None
-        self.mask = None
+        self.label_to_mask = {}
+        self.active_label = 0
         self.is_volume_inverted = False
 
         self.slice_thickness = 1.0
@@ -22,16 +24,25 @@ class Dataset:
         self.dir_z = Direction3(0, 0, -1)
 
     def clear(self):
-        self.volume = None
-        self.mask = None
         del self.volume
-        del self.mask
+        del self.label_to_mask
+        self.volume = None
+        self.label_to_mask = {}
 
         self.is_volume_inverted = False
 
     @stopwatch(__file__)
     def load_volume(self, vol_file):
-        pass
+        itk_img = sitk.ReadImage(vol_file)
+        direction = itk_img.GetDirection()
+        self.dims = Point3(itk_img.GetDimensions())
+        self.dir_x = Direction3(*direction[0:3])
+        self.dir_y = Direction3(*direction[3:6])
+        self.dir_z = Direction3(*direction[6:9])
+
+        self.spacing = Point3(*itk_img.GetSpacing())
+        self.origin = Point3(*itk_img.GetOrigin())
+        self.volume = sitk.GetArrayFromImage(itk_img)
 
     def add_mask(self, mask_file):
         pass
