@@ -35,7 +35,7 @@ class Datasets:
     def load_volume(self, vol_file):
         itk_img = sitk.ReadImage(vol_file)
         direction = itk_img.GetDirection()
-        self.dims = Point3(itk_img.GetDimensions())
+        self.dims = Point3(*itk_img.GetDimension())
         self.dir_x = Direction3(*direction[0:3])
         self.dir_y = Direction3(*direction[3:6])
         self.dir_z = Direction3(*direction[6:9])

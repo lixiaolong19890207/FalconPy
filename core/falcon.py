@@ -109,7 +109,7 @@ class Falcon:
     def get_batch_direction_3d(self, angle: float, plane_type: PlaneType):
         pass
 
-    def set_vr_wwwl(self, ww: float, wl: float, label: str = None):
+    def set_vr_ww_wl(self, ww: float, wl: float, label: str = None):
         pass
 
     def set_plane_idx(self, index: int, plane_type: PlaneType):
