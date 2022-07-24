@@ -1,3 +1,4 @@
+import math
 from typing import Dict
 
 import SimpleITK as sitk
@@ -36,8 +37,43 @@ class Render:
     def set_transfer_function(self, func: Dict[int, RGBA]):
         pass
 
+    def update_transform_matrix(self, rotate_x: float, rotate_z: float, scale: float):
+        scale_matrix = np.identity(3) / scale
+
+        radian = math.pi / 180
+        rotate_x_matrix = np.array([
+            [1, 0, 0],
+            [0, math.cos(rotate_x) / radian, -math.sin(rotate_x) / radian],
+            [0, math.sin(rotate_x) / radian, math.cos(rotate_x) / radian]
+        ])
+        rotate_z_matrix = np.array([
+            [math.cos(rotate_x) / radian, math.sin(rotate_x) / radian, 0],
+            [-math.sin(rotate_x) / radian, math.cos(rotate_x) / radian, 0],
+            [0, 0, 1]
+        ])
+
+        self.transform_matrix = np.dot(
+            self.transform_matrix,
+            np.dot(
+                rotate_z_matrix,
+                np.dot(
+                    rotate_x_matrix, scale_matrix
+                )
+            )
+        )
+
+        self.rotate_matrix = np.dot(
+            self.rotate_matrix,
+            np.dot(
+                rotate_z_matrix,
+                rotate_x_matrix
+            )
+        )
+        self.t_rotate_matrix = self.rotate_matrix.transpose()
+
     def rotate(self, rotate_x: float, rotate_y: float):
-        pass
+        self.update_transform_matrix(rotate_x, rotate_y, 1.0)
+        kernel.cu_copy_operator_matrix(self.transform_matrix)
 
     def zoom(self, ratio: float):
         self.scale *= ratio
@@ -48,4 +84,3 @@ class Render:
 
     def cpy_transfer_to_device(self):
         pass
-

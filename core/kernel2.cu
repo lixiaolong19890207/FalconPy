@@ -151,7 +151,7 @@ bool cu_setTransferFunc( float* pTransferFunc, int nLenTransferFunc, unsigned ch
             0,
             nLenTransferFunc*sizeof(float4),
             1,
-            cudaMemcpyHostToDevice
+            cudaMemcp1yHostToDevice
         )
     );
 
