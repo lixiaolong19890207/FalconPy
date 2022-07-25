@@ -8,12 +8,6 @@ cudaExtent volume_size;
 unsigned char* p_vr = 0;
 float3 normal, spacing, max_per;
 int volume_of_interest[6];
-int voi_left = -1;
-int voi_right = -1;
-int voi_top = -1;
-int voi_bottom = -1;
-int voi_front = -1;
-int voi_back = -1;
 int width_vr = 0;
 int height_vr = 0;
 
@@ -96,12 +90,12 @@ void cuda_copy_operator_matrix( float *p_transform_matrix)
 extern "C"
 void cu_set_voi(int left, int right, int top, int bottom, int front, int back)
 {
-	voi_left = left;
-	voi_right = right;
-	voi_top = top;
-	voi_bottom = bottom;
-	voi_front = front;
-	voi_back = back;
+	volume_of_interest[0] = left;
+	volume_of_interest[1] = right;
+	volume_of_interest[2] = top;
+	volume_of_interest[3] = bottom;
+	volume_of_interest[4] = front;
+	volume_of_interest[5] = back;
 }
 
 __device__ float3 mul(const float &m, const float3 &v)

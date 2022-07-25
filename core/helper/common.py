@@ -9,7 +9,8 @@ import ctypes
 import numpy as np
 import os
 from cuda import cuda, cudart, nvrtc
-from helper_cuda import checkCudaErrors
+
+from core.helper.helper_cuda import checkCudaErrors
 
 
 class KernelHelper:
@@ -19,7 +20,9 @@ class KernelHelper:
         if CUDA_HOME == None:
             CUDA_HOME = os.getenv('CUDA_PATH')
         if CUDA_HOME == None:
-            raise RuntimeError('Environment variable CUDA_HOME or CUDA_PATH is not set')
+            CUDA_HOME = '/usr/local/cuda'
+            if not os.path.exists(CUDA_HOME):
+                raise RuntimeError('Environment variable CUDA_HOME or CUDA_PATH is not set')
         include_dirs = os.path.join(CUDA_HOME, 'include')
 
         # Initialize CUDA

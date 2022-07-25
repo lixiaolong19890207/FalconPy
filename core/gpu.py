@@ -1,9 +1,9 @@
 import numpy as np
 from pathlib import Path
 
-from cuda import cuda, cudart
-from core.cuda.common import KernelHelper
-from core.cuda.helper_cuda import findCudaDevice, checkCudaErrors
+from helper import cuda, cudart
+from core.helper.common import KernelHelper
+from core.helper.helper_cuda import findCudaDevice, checkCudaErrors
 from core.point import Point3
 
 __cur_path = Path(__file__).resolve().parent
@@ -28,15 +28,15 @@ class Kernel:
 
         self.const_transform_matrix = kernel_mods.getGlobal(b'const_transform_matrix')
         self.volume_text_obj = kernel_mods.getGlobal(b'volume_text_obj')
-        # self.d_volume_array = kernel_mods.getGlobal(b'd_volume_array')
-        self.d_volume_array = None
+        self.d_volume_array = kernel_mods.getGlobal(b'd_volume_array')
+        # self.d_volume_array = None
 
         self.__cu_render = kernel_mods.getFunction(b'cu_render')
 
     def free(self):
-        checkCudaErrors(cudart.cudaDestroyTextureObject(tex))
-        checkCudaErrors(cudart.cudaFree(d_data))
-        checkCudaErrors(cudart.cudaFreeArray(cu_3darray))
+        checkCudaErrors(cudart.cudaDestroyTextureObject(self.const_transform_matrix))
+        checkCudaErrors(cudart.cudaFreeArray(self.d_volume_array))
+        # checkCudaErrors(cudart.cudaFree(cu_3darray))
 
     def reset(self, spacing_x, spacing_y, spacing_z):
         self.volume_of_interest = [-1, -1, -1, -1, -1, -1]
@@ -105,19 +105,13 @@ class Kernel:
 
         tex = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
 
-    def init(self):
-        pass
-
     def set_voi(self, voi: VOI):
         pass
 
     def copy_operator_matrix(self, transform_matrix):
-        checkCudaErrors(cudart.cudaMemcpyToSymbol(
-            self.const_transform_matrix,
-            transform_matrix,
-            9 * np.dtype(np.float32).itemsize
+        checkCudaErrors(cudart.cudaMemcpy(
+            self.const_transform_matrix, transform_matrix, 9 * np.dtype(np.float32).itemsize, cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost
         ))
-
 
     def render(self):
         pass

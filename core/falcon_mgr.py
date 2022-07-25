@@ -7,7 +7,7 @@ __all__ = ('falcon_mgr',)
 
 
 class FalconMgr:
-    def __int__(self):
+    def __init__(self):
         self.__uid_to_falcons = {}
         self.__instance_lock = Lock()
 

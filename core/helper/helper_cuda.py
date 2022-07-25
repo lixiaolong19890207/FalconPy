@@ -6,7 +6,7 @@
 # this software and related documentation outside the terms of the EULA
 # is strictly prohibited.
 from cuda import cuda, cudart, nvrtc
-from helper_string import getCmdLineArgumentInt, checkCmdLineFlag
+from core.helper.helper_string import getCmdLineArgumentInt, checkCmdLineFlag
 
 
 def _cudaGetErrorEnum(error):
