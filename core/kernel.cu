@@ -11,6 +11,16 @@ int width_vr = 0;
 int height_vr = 0;
 
 
+typedef struct {
+    int xMin;
+    int yMin;
+    int xMax;
+    int yMax;
+    int zMin;
+    int zMax;
+} BoundingBox;
+
+
 __device__ float3 mul(const float &m, const float3 &v)
 {
 	float3 r;
@@ -123,7 +133,7 @@ __global__ void d_render(
 	float3 f3maxper,
 	float3 f3Spacing,
 	float3 f3Nor,
-	VOI voi,
+	BoundingBox box,
 	cudaExtent volumeSize,
 	bool invertZ,
 	float4 f4ColorBG
@@ -187,7 +197,7 @@ __global__ void d_render(
 			nxIdx = pos.x * volumeSize.width;
 			nyIdx = pos.y * volumeSize.height;
 			nzIdx = pos.z * volumeSize.depth;
-			if (nxIdx<voi.left || nxIdx>voi.right || nyIdx<voi.posterior || nyIdx>voi.anterior || nzIdx<voi.head || nzIdx>voi.foot)
+			if (nxIdx<box.xMin.left || nxIdx>box.xMax || nyIdx<box.yMin || nyIdx>box.yMax || nzIdx<box.zMin || nzIdx>box.zMax)
 			{
 				accuLength += fStepTemp;
 				continue;
@@ -267,7 +277,7 @@ void cuda_render(unsigned char* pVR, int width, int height, float xTranslate, fl
 		max_per,
 		spacing,
 		normal,
-		voi,
+		box,
 		volume_size,
 		invertZ,
 		clrBG
