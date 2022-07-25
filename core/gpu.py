@@ -4,7 +4,6 @@ import numpy as np
 from pathlib import Path
 
 from cuda import cuda, cudart
-from cuda.ccudart import cudaFree
 
 from core.helper.common import KernelHelper
 from core.helper.helper_cuda import findCudaDevice, checkCudaErrors
