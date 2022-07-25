@@ -1,7 +1,6 @@
 
 __constant__ float const_transform_matrix[9];
 
-cudaTextureObject_t volume_text_obj;
 cudaArray* d_volume_array = 0;
 cudaExtent volume_size;
 
@@ -11,92 +10,6 @@ int volume_of_interest[6];
 int width_vr = 0;
 int height_vr = 0;
 
-
-extern "C"
-void cuda_copy_volume(short* volume_array, cudaExtent volume_size)
-{
-    volume_size = make_cudaExtent(volume_size.width, volume_size.height, volume_size.depth);
-    if (d_volume_array != 0)
-    {
-        checkCudaErrors(cudaFreeArray(d_volume_array));
-        d_volume_array = 0;
-        volume_text_obj = 0;
-    }
-    
-    cudaChannelFormatDesc channel_format_desc = cudaCreateChannelDesc<short>();
-    checkCudaErrors(cudaMalloc3DArray(&d_volume_array, &channel_format_desc, volume_size));
-    
-    cudaMemcpy3DParms copy_params = {0};
-	copyParams.dstArray = d_volume_array;
-	copyParams.extent   = volume_size;
-	copyParams.kind     = cudaMemcpyHostToDevice;
-	copyParams.srcPtr   = make_cudaPitchedPtr(
-		(void*)volume_array,
-		volume_size.width*sizeof(short),
-		volume_size.width,
-		volume_size.height
-	);
-
-	checkCudaErrors( cudaMemcpy3D(&copy_params) );
-
-	cudaResourceDesc res_desc;
-	memset(&res_desc, 0, sizeof(cudaResourceDesc));
-
-	res_desc.resType = cudaResourceTypeArray;
-	res_desc.res.array.array = d_volume_array;
-
-	cudaTextureDesc tex_desc;
-	memset(&tex_desc, 0, sizeof(cudaTextureDesc));
-
-	tex_desc.normalizedCoords = true;  // access with normalized texture coordinates
-	tex_desc.filterMode = cudaFilterModeLinear;  // linear interpolation
-
-	tex_desc.addressMode[0] = cudaAddressModeClamp;  // clamp texture coordinates
-	tex_desc.addressMode[1] = cudaAddressModeClamp;
-	tex_desc.addressMode[2] = cudaAddressModeClamp;
-
-	tex_desc.readMode = cudaReadModeNormalizedFloat;
-	checkCudaErrors( cudaCreateTextureObject(&volume_text_obj, &res_desc, &tex_desc, NULL) );
-}
-
-extern "C"
-void cuda_init(float spacing_x, float spacing_y, float spacing_z)
-{
-	p_vr = 0;
-	width_vr = 0;
-	height_vr = 0;
-
-	spacing.x = spacing_x;
-	spacing.y = spacing_y;
-	spacing.z = spacing_z;
-	normal.x = 1.0f / volume_size.width;
-	normal.y = 1.0f / volume_size.height;
-	normal.z = 1.0f / volume_size.depth;
-
-	float max_spacing = max(spacing_x, max(spacing_y, spacing_z));
-	float max_length = max(volume_size.width * spacing_x, max(volume_size.height * spacing_y, volume_size.depth * spacing_z));
-
-	max_per.x = 1.0f * max_length / (volume_size.width * spacing_x);
-	max_per.y = 1.0f * max_length / (volume_size.height * spacing_y);
-	max_per.z = 1.0f * max_length / (volume_size.depth * spacing_z);
-}
-
-extern "C"
-void cuda_copy_operator_matrix( float *p_transform_matrix)
-{
-	checkCudaErrors(cudaMemcpyToSymbol(const_transform_matrix, p_transform_matrix, sizeof(float)*9));
-}
-
-extern "C"
-void cu_set_voi(int left, int right, int top, int bottom, int front, int back)
-{
-	volume_of_interest[0] = left;
-	volume_of_interest[1] = right;
-	volume_of_interest[2] = top;
-	volume_of_interest[3] = bottom;
-	volume_of_interest[4] = front;
-	volume_of_interest[5] = back;
-}
 
 __device__ float3 mul(const float &m, const float3 &v)
 {

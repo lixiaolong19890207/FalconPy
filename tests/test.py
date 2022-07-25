@@ -71,19 +71,19 @@ def test_modify_intarr(kernel_helper):
 
 
 def test_modify_int(kernel_helper):
-    h_width = 5
+    h_width = ctypes.c_float(2)
     d_ptr, d_size = kernel_helper.getGlobal(b'width_vr')
 
     checkCudaErrors(cuda.cuMemcpyHtoD(
         d_ptr, h_width, d_size
     ))
 
-    h_width2 = 0
+    h_width2 = ctypes.c_float(0)
     checkCudaErrors(cuda.cuMemcpyDtoH(
         h_width2, d_ptr, d_size,
     ))
 
-    assert (h_width == h_width2).all()
+    assert h_width.value == h_width2.value
 
 
 def test_modify_float3(kernel_helper):
@@ -105,59 +105,36 @@ def test_modify_float3(kernel_helper):
 def test_struct(kernel_helper):
     d_ptr, d_size = kernel_helper.getGlobal(b'voi')
 
-    struct = np.dtype([
-        ('width', np.int32),
-        ('height', np.int32),
-    ])
+    class VOI(ctypes.Structure):
+        _fields_ = [
+            ('left', ctypes.c_int),
+            ('right', ctypes.c_int),
+        ]
 
-    h_voi = np.array([5], struct)
+    h_voi = VOI(4, 9)
 
     checkCudaErrors(cuda.cuMemcpyHtoD(
         d_ptr, h_voi, d_size
     ))
 
-    h_voi2 = np.array([0], struct)
+    h_voi2 = VOI(0, 0)
     checkCudaErrors(cuda.cuMemcpyDtoH(
         h_voi2, d_ptr, d_size,
     ))
 
-    assert (h_voi == h_voi2).all()
-
-
-def test_cudaTextureObject(kernel_helper):
-    tex = checkCudaErrors(cudart.cudaCreateTextureObject(texRes, texDescr, None))
-    dimBlock = cudart.dim3()
-    dimBlock.x = 8
-    dimBlock.y = 8
-    dimBlock.z = 1
-    dimGrid = cudart.dim3()
-    dimGrid.x = width / dimBlock.x
-    dimGrid.y = width / dimBlock.y
-    dimGrid.z = 1
-
-    print("Covering Cubemap data array of {}~3 x {}: Grid size is {} x {}, each block has 8 x 8 threads".format(
-        width, num_layers, dimGrid.x, dimGrid.y))
-
-    kernelHelper = common.KernelHelper(simpleCubemapTexture, devID)
-    _transformKernel = kernelHelper.getFunction(b'transformKernel')
-    kernelArgs = ((d_data, width, tex), (ctypes.c_void_p, ctypes.c_int, None))
-    checkCudaErrors(cuda.cuLaunchKernel(_transformKernel,
-                                        dimGrid.x, dimGrid.y, dimGrid.z,  # grid dim
-                                        dimBlock.x, dimBlock.y, dimBlock.z,  # block dim
-                                        0, 0,  # shared mem and stream
-                                        kernelArgs, 0))  # arguments
+    assert (h_voi.left, h_voi.right) == (h_voi2.left, h_voi2.right)
 
 
 def test_cuda_extent(kernel_helper):
-    extent = cudart.cudaExtent()
-    extent.width = 1000
-    extent.height = 500
-    extent.depth = 0
-
     cudaExtent = cudart.make_cudaExtent(1, 2, 3)
     assert (cudaExtent.width == 1)
     assert (cudaExtent.height == 2)
     assert (cudaExtent.depth == 3)
+
+    extent = cudart.cudaExtent()
+    extent.width = 1000
+    extent.height = 500
+    extent.depth = 0
 
 
 def test_cudaArray(kernel_helper):
@@ -236,6 +213,7 @@ def main():
     test_struct(kernelHelper)
     test_modify_int(kernelHelper)
     test_modify_float3(kernelHelper)
+    test_cuda_extent(kernelHelper)
 
 
 if __name__ == "__main__":
