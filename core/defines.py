@@ -1,3 +1,4 @@
+import ctypes
 from typing import Optional, Union
 
 from pydantic import BaseModel
@@ -14,13 +15,15 @@ class RGBA(RGB):
     alpha: Union[int, float] = 0.0
 
 
-class Border(BaseModel):
-    left: Union[int, float] = -1
-    right: Union[int, float] = -1
-    front: Union[int, float] = -1
-    back: Union[int, float] = -1
-    top: Union[int, float] = -1
-    bottom: Union[int, float] = -1
+class BoundingBox(ctypes.Structure):
+    _fields_ = [
+        ('xMin', ctypes.c_int),
+        ('xMax', ctypes.c_int),
+        ('yMin', ctypes.c_int),
+        ('yMax', ctypes.c_int),
+        ('zMin', ctypes.c_int),
+        ('zMax', ctypes.c_int),
+    ]
 
 
 class WWWL(BaseModel):

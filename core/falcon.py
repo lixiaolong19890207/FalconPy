@@ -1,38 +1,84 @@
-from typing import Dict, List
+from typing import Dict
 
-from core.defines import RGBA
+import SimpleITK as sitk
 import pyfpng as fpng
+
+from core.defines import RGBA, BoundingBox
+from core.direction import Direction3
 from core.enums import PlaneType, ShadingType
+from core.gpu import Kernel
+from core.point import Point3
 
 
 class Falcon:
     def __init__(self):
-        pass
+        self.dir_z = None
+        self.dir_y = None
+        self.dir_x = None
+        self.spacing = None
+        self.origin = None
+        self.depth = None
+        self.dimension = None
+        self.array_img = None
+        self.transfer_func = None
+        self.background_color = RGBA()
 
-    def load_volume(self, vol_file, width, height, depth):
-        pass
+        self.bounding_box = BoundingBox()
+        self.kernel = Kernel()
+
+    def load_volume(self, vol_file):
+        itk_img = sitk.ReadImage(vol_file)
+        direction = itk_img.GetDirection()
+        self.dir_x = Direction3(*direction[0:3])
+        self.dir_y = Direction3(*direction[3:6])
+        self.dir_z = Direction3(*direction[6:9])
+
+        self.spacing = itk_img.GetSpacing()
+        self.depth = itk_img.GetDepth()
+        self.array_img = sitk.GetArrayFromImage(itk_img)
+        self.dimension = Point3(*itk_img.GetDimension())
+
+        self.transfer_func = {
+            5: RGBA(red=0.8, green=0.8, blue=0.8, alpha=0),
+            90: RGBA(red=0.8, green=0.8, blue=0.8, alpha=0),
+        }
+
         return self
 
-    def set_direction(self, x, y, z):
-        pass
+    def set_direction(self, dir_x, dir_y, dir_z):
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.dir_z = dir_z
         return self
 
     def set_spacing(self, x, y, z):
-        pass
+        self.spacing = [x, y, z]
+        self.kernel.reset(x, y, z)
         return self
 
+    def set_bounding_box(self, box: BoundingBox):
+        self.bounding_box.xMin = box.xMin
+        self.bounding_box.xMax = box.xMax
+        self.bounding_box.yMin = box.yMin
+        self.bounding_box.yMax = box.yMax
+        self.bounding_box.zMin = box.zMin
+        self.bounding_box.zMax = box.zMax
+
     def set_origin(self, x, y, z):
-        pass
+        self.origin = [x, y, z]
         return self
 
     def reset(self):
         pass
 
     def set_transfer_function(self, func: Dict[int, RGBA]):
-        pass
+        self.kernel.copy_transfer_function(func)
 
     def set_background_color(self, clr: RGBA):
-        pass
+        self.background_color.red = clr.red
+        self.background_color.blue = clr.blue
+        self.background_color.green = clr.green
+        self.background_color.alpha = clr.alpha
 
     def get_plane_data(self, plane_type: PlaneType):
         pass
@@ -44,10 +90,21 @@ class Falcon:
         pass
 
     def get_vr_data(self, width: int, height: int):
-        pass
+        self.bounding_box.xMax = self.dimension[0]
+        self.bounding_box.yMax = self.dimension[1]
+        self.bounding_box.zMax = self.dimension[2]
+        cu_render(pVR, nWidth, nHeight, m_fTotalXTranslate, m_fTotalYTranslate, m_fTotalScale, m_dataMan.Need2InvertZ(),
+                  m_dataMan.GetColorBackground());
+
+        return self.kernel.render(width, height)
 
     def get_vr_b64png(self, width: int, height: int):
-        pass
+        data = self.get_vr_data(width, height)
+        success, encoded = fpng.encode_image_to_memory(data)
+        if not success:
+            return None
+
+        return encoded
 
     def get_plane_idx(self, plane_type: PlaneType):
         pass
