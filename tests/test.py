@@ -142,6 +142,8 @@ def test_char_ptr(kernel_helper):
     buffer_size = np.dtype(np.int8).itemsize * N
     dbuf = checkCudaErrors(cuda.cuMemAlloc(buffer_size))
 
+    checkCudaErrors(cuda.cuMemsetD8(dbuf, 0, buffer_size))
+
     _TestCharPtr = kernel_helper.getFunction(b'TestCharPtr')
     threads_per_block = 256
     blocks_per_grid = (N + threads_per_block - 1) / threads_per_block
