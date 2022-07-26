@@ -3,6 +3,7 @@ from typing import Dict
 import SimpleITK as sitk
 import pyfpng as fpng
 
+from common.stopwatch import stopwatch
 from core.defines import RGBA, BoundingBox
 from core.direction import Direction3
 from core.enums import PlaneType, ShadingType
@@ -89,6 +90,7 @@ class Falcon:
     def get_origin_b64png(self, z: int):
         pass
 
+    @stopwatch(__file__)
     def get_vr_data(self, width: int, height: int):
         self.bounding_box.xMax = self.dimension[0]
         self.bounding_box.yMax = self.dimension[1]
