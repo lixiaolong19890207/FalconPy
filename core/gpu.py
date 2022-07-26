@@ -50,7 +50,6 @@ class Kernel:
         self.h_normal.y = 1.0 / self.h_dims_extent.height
         self.h_normal.z = 1.0 / self.h_dims_extent.depth
 
-        max_spacing = max(spacing_x, max(spacing_y, spacing_z))
         max_length = max(
             self.h_dims_extent.width * spacing_x,
             max(

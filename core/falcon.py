@@ -24,6 +24,10 @@ class Falcon:
         self.transfer_func = None
         self.background_color = RGBA()
 
+        self.offset_x = 0
+        self.offset_y = 0
+        self.scale = 1.0
+
         self.bounding_box = BoundingBox()
         self.kernel = Kernel()
 
@@ -95,10 +99,8 @@ class Falcon:
         self.bounding_box.xMax = self.dimension[0]
         self.bounding_box.yMax = self.dimension[1]
         self.bounding_box.zMax = self.dimension[2]
-        cu_render(pVR, nWidth, nHeight, m_fTotalXTranslate, m_fTotalYTranslate, m_fTotalScale, m_dataMan.Need2InvertZ(),
-                  m_dataMan.GetColorBackground());
 
-        return self.kernel.render(width, height)
+        return self.kernel.render(width, height, self.offset_x, self.offset_y, self.scale, False, self.background_color)
 
     def get_vr_b64png(self, width: int, height: int):
         data = self.get_vr_data(width, height)

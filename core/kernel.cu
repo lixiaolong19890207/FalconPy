@@ -1,14 +1,8 @@
+#include <cuda_runtime.h>
 
 __constant__ float const_transform_matrix[9];
 
 cudaArray* d_volume_array = 0;
-cudaExtent volume_size;
-
-unsigned char* p_vr = 0;
-float3 normal, spacing, max_per;
-int volume_of_interest[6];
-int width_vr = 0;
-int height_vr = 0;
 
 
 typedef struct {
@@ -246,41 +240,4 @@ __global__ void d_render(
 		pPixelData[nIdx*3+1] = (result>>8) & 0xFF; //G
 		pPixelData[nIdx*3+2] = (result>>16) & 0xFF; //B
 	}
-}
-
-extern "C"
-void cuda_render(unsigned char* pVR, int width, int height, float xTranslate, float yTranslate, float scale, bool invertZ, RGBA colorBG)
-{
-	if (width>width_vr || height>height_vr)
-	{
-		if (p_vr != 0)
-			checkCudaErrors(cudaFree(p_vr));
-		width_vr = width;
-		height_vr = height;
-		checkCudaErrors(cudaMalloc( (void**)&p_vr, width_vr * height_vr * 3 * sizeof(unsigned char) ));
-	}
-
-	dim3 blockSize(32, 32);
-	dim3 gridSize( (width-1)/blockSize.x+1, (height-1)/blockSize.y+1 );
-
-	float4 clrBG = make_float4(colorBG.red, colorBG.green, colorBG.blue, colorBG.alpha);
-
-	d_render<<<gridSize, blockSize>>>(
-		p_vr,
-		volume_text_obj,
-		maskText,
-		width,
-		height,
-		xTranslate,
-		yTranslate,
-		scale,
-		max_per,
-		spacing,
-		normal,
-		box,
-		volume_size,
-		invertZ,
-		clrBG
-	);
-	cudaError_t t = cudaMemcpy( pVR, p_vr, width*height*3*sizeof(unsigned char), cudaMemcpyDeviceToHost );
 }
