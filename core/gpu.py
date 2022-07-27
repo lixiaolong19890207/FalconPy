@@ -114,39 +114,36 @@ class Kernel:
             self.h_transform_matrix, transform_matrix, self.h_transform_matrix_size
         ))
 
-    def copy_transfer_function(self, func, label):
-        channel_desc = checkCudaErrors(
-            cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
-        self.d_volume_array = checkCudaErrors(
-            cudart.cudaMalloc3DArray(channel_desc, self.h_dims_extent, cudart.cudaArrayCubemap))
-
-        memcpy_params = cudart.cudaMemcpy3DParms()
-        memcpy_params.srcPos = cudart.make_cudaPos(0, 0, 0)
-        memcpy_params.dstPos = cudart.make_cudaPos(0, 0, 0)
-        memcpy_params.srcPtr = cudart.make_cudaPitchedPtr(
-            volume_array,
-            self.h_dims_extent.width * np.dtype(np.int16).itemsize,
-            self.h_dims_extent.width,
-            self.h_dims_extent.height
-        )
-        memcpy_params.dstArray = self.d_volume_array
-        memcpy_params.extent = self.h_dims_extent
-        memcpy_params.kind = cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
-        checkCudaErrors(cudart.cudaMemcpy3D(memcpy_params))
+    def copy_transfer_function(self, transfer_func, label):
 
         tex_res = cudart.cudaResourceDesc()
         tex_res.resType = cudart.cudaResourceType.cudaResourceTypeArray
-        tex_res.res.array.array = self.d_volume_array
+        tex_res.res.array.array = self.d_transferFuncArrays[label]
 
         tex_descr = cudart.cudaTextureDesc()
         tex_descr.normalizedCoords = True
         tex_descr.filterMode = cudart.cudaTextureFilterMode.cudaFilterModeLinear
-        tex_descr.addressMode[0] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
-        tex_descr.addressMode[1] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
-        tex_descr.addressMode[2] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
-        tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeNormalizedFloat
+        tex_descr.addressMode[0] = cudart.cudaTextureAddressMode.cudaAddressModeClamp
+        tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeElementType
 
-        self.h_volume_text_obj = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
+        channel_desc = checkCudaErrors(cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
+        if self.d_transferFuncArrays[label]:
+            checkCudaErrors(cudart.cudaFreeArray(self.d_transferFuncArrays[label]))
+            self.d_transferFuncArrays[label] = None
+
+        self.d_transferFuncArrays[label] = checkCudaErrors(
+            cudart.cudaMallocArray(channel_desc, size, 0, 0))
+
+        checkCudaErrors(cudart.cudaMemcpy2DToArray(
+            self.d_transferFuncArrays[label], 0, 0, transfer_func, size, size, 1,
+            cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
+        ))
+
+        self.transferFuncTexts[nLabel] = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
+
+        checkCudaErrors(cuda.cuMemcpyHtoD(
+            constTransferFuncTexts, transferFuncTexts, constTransferFuncTexts_size
+        ))
 
     def render(self, width, height, x_pan, y_pan, scale, invert_z, color):
         if width > self.width_vr or height > self.height_vr:
