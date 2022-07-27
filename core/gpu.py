@@ -31,6 +31,7 @@ class Kernel:
 
         kernel_mods = KernelHelper(KERNEL_CODE, DEVICE_ID)
         self.h_transform_matrix, self.h_transform_matrix_size = kernel_mods.getGlobal(b'const_transform_matrix')
+        self.h_transform_matrix, self.h_transform_matrix_size = kernel_mods.getGlobal(b'const_transfer_func_texts')
         self.d_volume_array = kernel_mods.getGlobal(b'd_volume_array')
 
         self.__cuda_render_func = kernel_mods.getFunction(b'cu_render')
@@ -113,8 +114,39 @@ class Kernel:
             self.h_transform_matrix, transform_matrix, self.h_transform_matrix_size
         ))
 
-    def copy_transfer_function(self, func):
-        pass
+    def copy_transfer_function(self, func, label):
+        channel_desc = checkCudaErrors(
+            cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
+        self.d_volume_array = checkCudaErrors(
+            cudart.cudaMalloc3DArray(channel_desc, self.h_dims_extent, cudart.cudaArrayCubemap))
+
+        memcpy_params = cudart.cudaMemcpy3DParms()
+        memcpy_params.srcPos = cudart.make_cudaPos(0, 0, 0)
+        memcpy_params.dstPos = cudart.make_cudaPos(0, 0, 0)
+        memcpy_params.srcPtr = cudart.make_cudaPitchedPtr(
+            volume_array,
+            self.h_dims_extent.width * np.dtype(np.int16).itemsize,
+            self.h_dims_extent.width,
+            self.h_dims_extent.height
+        )
+        memcpy_params.dstArray = self.d_volume_array
+        memcpy_params.extent = self.h_dims_extent
+        memcpy_params.kind = cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
+        checkCudaErrors(cudart.cudaMemcpy3D(memcpy_params))
+
+        tex_res = cudart.cudaResourceDesc()
+        tex_res.resType = cudart.cudaResourceType.cudaResourceTypeArray
+        tex_res.res.array.array = self.d_volume_array
+
+        tex_descr = cudart.cudaTextureDesc()
+        tex_descr.normalizedCoords = True
+        tex_descr.filterMode = cudart.cudaTextureFilterMode.cudaFilterModeLinear
+        tex_descr.addressMode[0] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
+        tex_descr.addressMode[1] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
+        tex_descr.addressMode[2] = cudart.cudaTextureAddressMode.cudaAddressModeWrap
+        tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeNormalizedFloat
+
+        self.h_volume_text_obj = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
 
     def render(self, width, height, x_pan, y_pan, scale, invert_z, color):
         if width > self.width_vr or height > self.height_vr:

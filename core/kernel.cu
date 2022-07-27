@@ -1,10 +1,15 @@
-#include <cuda_runtime.h>
+// #include <cuda_runtime.h>
+// #include <helper_cuda.h>
+// #include <helper_math.h>
 
-__constant__ float const_transform_matrix[9];
+typedef struct {
+	float3 m[3];
+} float3x3;
+
+__constant__ float3x3 const_transform_matrix;
 
 cudaArray* d_volume_array = 0;
-
-
+typedef unsigned uint;
 typedef struct {
     int xMin;
     int yMin;
@@ -15,12 +20,53 @@ typedef struct {
 } BoundingBox;
 
 
-__device__ float3 mul(const float &m, const float3 &v)
+inline __host__ __device__ float dot(float3 a, float3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+inline float rsqrtf(float x)
+{
+    return 1.0f / sqrtf(x);
+}
+inline __host__ __device__ float3 operator*(float3 a, float3 b)
+{
+    return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+inline __host__ __device__ float3 operator*(float3 a, float b)
+{
+    return make_float3(a.x * b, a.y * b, a.z * b);
+}
+inline __host__ __device__ float4 operator+(float4 a, float4 b)
+{
+    return make_float4(a.x + b.x, a.y + b.y, a.z + b.z,  a.w + b.w);
+}
+inline __host__ __device__ float4 operator*(float4 a, float b)
+{
+    return make_float4(a.x * b, a.y * b, a.z * b,  a.w * b);
+}
+inline __host__ __device__ float4 operator*(float b, float4 a)
+{
+    return make_float4(b * a.x, b * a.y, b * a.z, b * a.w);
+}
+inline __host__ __device__ void operator+=(float4 &a, float4 b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+    a.w += b.w;
+}
+inline __host__ __device__ float3 normalize(float3 v)
+{
+    float invLen = rsqrtf(dot(v, v));
+    return v * invLen;
+}
+
+__device__ float3 mul(const float3x3 &m, const float3 &v)
 {
 	float3 r;
-	r.x = dot(v, M.m[0]);
-	r.y = dot(v, M.m[1]);
-	r.z = dot(v, M.m[2]);
+	r.x = dot(v, m.m[0]);
+	r.y = dot(v, m.m[1]);
+	r.z = dot(v, m.m[2]);
 	return r;
 }
 
@@ -56,7 +102,7 @@ __device__ float4 tracing(
 	float diffuse = dot(N, dirLight);
 	float4 clrLight = col * 0.35f;
 
-	float4 f4Temp = make_float4(0.0f);
+	float4 f4Temp = make_float4(0.0f,0.0f,0.0f,0.0f);
 	if ( diffuse > 0.0f )
 	{
 		f4Temp = col * (diffuse*0.8f + 0.16f*(pow(diffuse, 8.0f)));
@@ -84,7 +130,7 @@ __device__ bool getNextStep(
 
 	if (accuLength > 0.0f)
 	{
-		if (MAX(fAlphaTemp, fAlphaPre) > 0.001f)
+		if (max(fAlphaTemp, fAlphaPre) > 0.001f)
 		{
 			if (fStepTemp == fStepL1)
 			{
@@ -116,7 +162,7 @@ __device__ bool getNextStep(
 **  /-y
 */
 
-__global__ void d_render(
+__global__ void cu_render(
 	unsigned char* pPixelData,
 	cudaTextureObject_t volumeText,
 	int width,
@@ -133,17 +179,17 @@ __global__ void d_render(
 	float4 f4ColorBG
 )
 {
-	const int x = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	const int y = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if ((x < width) && (y < height) && (x >= 0) && (y >= 0))
+	if ((x >= 0) && (x < width) && (y >= 0) && (y < height))
 	{
 		uint nIdx = __umul24(y, width) + x;
 
 		float u = 1.0f*(x-width/2.0f-xTranslate)/width;
 		float v = 1.0f*(y-height/2.0f-yTranslate)/height;
 
-		float4 sum = make_float4(0.0f);
+		float4 sum = make_float4(0.0f,0.0f,0.0f,0.0f);
 
 		float3 dirLight = make_float3(0.0f, 1.0f, 0.0f);
 		dirLight = normalize(mul(const_transform_matrix, dirLight));
@@ -191,7 +237,7 @@ __global__ void d_render(
 			nxIdx = pos.x * volumeSize.width;
 			nyIdx = pos.y * volumeSize.height;
 			nzIdx = pos.z * volumeSize.depth;
-			if (nxIdx<box.xMin.left || nxIdx>box.xMax || nyIdx<box.yMin || nyIdx>box.yMax || nzIdx<box.zMin || nzIdx>box.zMax)
+			if (nxIdx<box.xMin || nxIdx>box.xMax || nyIdx<box.yMin || nyIdx>box.yMax || nzIdx<box.zMin || nzIdx>box.zMax)
 			{
 				accuLength += fStepTemp;
 				continue;
@@ -234,7 +280,7 @@ __global__ void d_render(
 			sum = f4ColorBG;
 		}
 
-		unsigned int result = rgbaFloatToInt(sum);
+		unsigned int result = rgba_float_to_int(sum);
 
 		pPixelData[nIdx*3]	 = result & 0xFF; //R
 		pPixelData[nIdx*3+1] = (result>>8) & 0xFF; //G
