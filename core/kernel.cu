@@ -186,6 +186,7 @@ __global__ void cu_render(
 	{
 		uint nIdx = __umul24(y, width) + x;
 
+        //图像原点在中间
 		float u = 1.0f*(x-width/2.0f-xTranslate)/width;
 		float v = 1.0f*(y-height/2.0f-yTranslate)/height;
 
@@ -194,6 +195,7 @@ __global__ void cu_render(
 		float3 dirLight = make_float3(0.0f, 1.0f, 0.0f);
 		dirLight = normalize(mul(const_transform_matrix, dirLight));
 
+        //根据有没有透明度选择不同的步长前进
 		float fStepL1 = 1.0f/volumeSize.depth;
 		float fStepL4 = fStepL1/4.0f;
 		float fStepL8 = fStepL1/8.0f;
@@ -206,6 +208,7 @@ __global__ void cu_render(
 		for (int i=0; i<MAXOBJECTCOUNT+1; i++){
 			alphaAccObject[i] = 0.0f;
 		}
+		//计算光线总值
 		float alphaAcc = 0.0f;
 
 		float accuLength = 0.0f;
@@ -215,25 +218,31 @@ __global__ void cu_render(
 		float fy = 0;
 
 		float4 col;
+		// 步长
 		float fAlphaTemp = 0.0f;
+		// 上次的步长
 		float fAlphaPre = 0.0f;
 
 		unsigned char label = 0;
 		float3 alphawwwl = make_float3(0.0f, 0.0f, 0.0f);
 
+        // 1.732总长度
 		while (accuLength < 1.732)
 		{
+		    // 0.886原点
 			fy = (accuLength-0.866)*scale;
 
 			pos = make_float3(u, fy, v);
 			pos = mul(const_transform_matrix, pos);
 
+            // 归一化
 			pos.x = pos.x * f3maxper.x + 0.5f;
 			pos.y = pos.y * f3maxper.y + 0.5f;
 			pos.z = pos.z * f3maxper.z + 0.5f;
 			if (invertZ)
 				pos.z = 1.0f - pos.z;
 
+            // 重新算出实际坐标点
 			nxIdx = pos.x * volumeSize.width;
 			nyIdx = pos.y * volumeSize.height;
 			nzIdx = pos.z * volumeSize.depth;
@@ -246,6 +255,7 @@ __global__ void cu_render(
 
 			alphawwwl = constAlphaAndWWWL[label];
 
+            // 32768 2的15次方
 			temp = 32768*tex3D<float>(volumeText, pos.x, pos.y, pos.z);
 			temp = (temp - alphawwwl.z)/alphawwwl.y + 0.5;
 			if (temp>1)
@@ -270,6 +280,7 @@ __global__ void cu_render(
 				alphaAcc += (1.0f - alphaAcc) * col.w;
 			}
 
+            // 达到0.995时候就不需要再计算了
 			if (alphaAcc > 0.995f){
 				break;
 			}
