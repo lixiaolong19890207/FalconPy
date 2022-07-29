@@ -162,7 +162,7 @@ class Kernel:
         if not self.d_volume_image:
             self.width_vr = width
             self.height_vr = height
-            buffer_size = np.dtype(np.int8).itemsize * self.width_vr * self.height_vr * 3
+            buffer_size = np.dtype(np.uint8).itemsize * self.width_vr * self.height_vr * 3
             self.d_volume_image = checkCudaErrors(cuda.cuMemAlloc(buffer_size))
 
         dim_block = cudart.dim3()
@@ -197,11 +197,11 @@ class Kernel:
             kernel_args, 0
         ))
 
-        h_volume_image = np.empty(np.dtype(np.int8).itemsize * self.width_vr * self.height_vr * 3, dtype='int8')
+        h_volume_image = np.zeros((self.width_vr, self.height_vr, 3), dtype='uint8')
         checkCudaErrors(cuda.cuMemcpyDtoH(
             h_volume_image,
             self.d_volume_image,
-            np.dtype(np.int8).itemsize * self.width_vr * self.height_vr * 3
+            np.dtype(np.uint8).itemsize * self.width_vr * self.height_vr * 3
         ))
 
         return h_volume_image

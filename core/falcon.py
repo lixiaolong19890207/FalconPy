@@ -1,8 +1,10 @@
 import ctypes
-from typing import Dict
 
 import SimpleITK as sitk
 import pyfpng as fpng
+import numpy as np
+from typing import Dict
+from PIL import Image
 
 from common.stopwatch import stopwatch
 from core.defines import RGBA, BoundingBox
@@ -105,6 +107,7 @@ class Falcon:
 
     def get_vr_b64png(self, width: int, height: int):
         data = self.get_vr_data(width, height)
+        data = data.reshape(512, 512, 3)
         success, encoded = fpng.encode_image_to_memory(data)
         if not success:
             return None

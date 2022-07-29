@@ -176,8 +176,8 @@ __global__ void cu_render(
 	float3 f3Nor,
 	BoundingBox box,
 	cudaExtent volumeSize,
-	bool invertZ,
-	float4 f4ColorBG
+	bool invertZ
+// 	float4 f4ColorBG
 )
 {
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -277,7 +277,7 @@ __global__ void cu_render(
 		}
 
 		if (sum.x==0.0f && sum.y==0.0f && sum.z==0.0f && sum.w==0.0f){
-			sum = f4ColorBG;
+			sum = make_float4(0.8f, 0.8f, 0.8f, 0);;
 		}
 
 		unsigned int result = rgba_float_to_int(sum);
