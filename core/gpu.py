@@ -30,14 +30,18 @@ class Kernel:
         self.d_volume_image = None
 
         kernel_mods = KernelHelper(KERNEL_CODE, DEVICE_ID)
-        self.h_transform_matrix, self.h_transform_matrix_size = kernel_mods.getGlobal(b'const_transform_matrix')
-        self.h_transform_matrix, self.h_transform_matrix_size = kernel_mods.getGlobal(b'const_transfer_func_texts')
-        self.d_volume_array = kernel_mods.getGlobal(b'd_volume_array')
+        self.d_transform_matrix, self.d_transform_matrix_size = kernel_mods.getGlobal(b'const_transform_matrix')
+        self.d_const_transfer_func_text, self.d_const_transfer_func_text_size = kernel_mods.getGlobal(b'const_transfer_func_text')
+        self.d_volume_array, _ = kernel_mods.getGlobal(b'd_volume_array')
+        self.d_transfer_func_array, _ = kernel_mods.getGlobal(b'd_transfer_func_array')
 
         self.__cuda_render_func = kernel_mods.getFunction(b'cu_render')
 
+    def set_bounding_box(self, box):
+        self.bounding_box = box
+
     def free(self):
-        checkCudaErrors(cudart.cudaDestroyTextureObject(self.h_transform_matrix))
+        checkCudaErrors(cudart.cudaDestroyTextureObject(self.d_transform_matrix))
         checkCudaErrors(cudart.cudaFreeArray(self.d_volume_array))
 
     def reset(self, spacing_x, spacing_y, spacing_z):
@@ -72,7 +76,7 @@ class Kernel:
         self.h_dims_extent.depth = shape[2]
 
         if self.d_volume_array:
-            checkCudaErrors(cudart.cudaFreeArray(self.d_volume_array))
+            # checkCudaErrors(cudart.cudaFreeArray(self.d_volume_array))
             self.d_volume_array = None
             self.h_volume_text_obj = None
 
@@ -111,14 +115,18 @@ class Kernel:
 
     def copy_operator_matrix(self, transform_matrix):
         checkCudaErrors(cuda.cuMemcpyHtoD(
-            self.h_transform_matrix, transform_matrix, self.h_transform_matrix_size
+            self.d_transform_matrix, transform_matrix, self.d_transform_matrix_size
         ))
 
     def copy_transfer_function(self, transfer_func, label):
 
+        if self.d_transfer_func_array:
+            checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
+            self.d_transfer_func_array = None
+
         tex_res = cudart.cudaResourceDesc()
         tex_res.resType = cudart.cudaResourceType.cudaResourceTypeArray
-        tex_res.res.array.array = self.d_transferFuncArrays[label]
+        tex_res.res.array.array = self.d_transfer_func_array
 
         tex_descr = cudart.cudaTextureDesc()
         tex_descr.normalizedCoords = True
@@ -127,22 +135,22 @@ class Kernel:
         tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeElementType
 
         channel_desc = checkCudaErrors(cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
-        if self.d_transferFuncArrays[label]:
-            checkCudaErrors(cudart.cudaFreeArray(self.d_transferFuncArrays[label]))
-            self.d_transferFuncArrays[label] = None
+        if self.d_transfer_func_array:
+            checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
+            self.d_transfer_func_array = None
 
-        self.d_transferFuncArrays[label] = checkCudaErrors(
-            cudart.cudaMallocArray(channel_desc, size, 0, 0))
+        self.d_transfer_func_array = checkCudaErrors(
+            cudart.cudaMallocArray(channel_desc, 888, 0, 0))
 
         checkCudaErrors(cudart.cudaMemcpy2DToArray(
-            self.d_transferFuncArrays[label], 0, 0, transfer_func, size, size, 1,
+            self.d_transfer_func_array, 0, 0, transfer_func, size, size, 1,
             cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
         ))
 
-        self.transferFuncTexts[nLabel] = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
+        self.transferFuncText = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
 
         checkCudaErrors(cuda.cuMemcpyHtoD(
-            constTransferFuncTexts, transferFuncTexts, constTransferFuncTexts_size
+            self.d_const_transfer_func_text, self.transferFuncText, constTransferFuncTexts_size
         ))
 
     def render(self, width, height, x_pan, y_pan, scale, invert_z, color):

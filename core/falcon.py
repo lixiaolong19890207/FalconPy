@@ -41,13 +41,13 @@ class Falcon:
         self.spacing = itk_img.GetSpacing()
         self.depth = itk_img.GetDepth()
         self.array_img = sitk.GetArrayFromImage(itk_img)
-        self.dimension = Point3(*itk_img.GetDimension())
+        self.dimension = Point3(*itk_img.GetSize())
 
         self.transfer_func = {
             5: RGBA(red=0.8, green=0.8, blue=0.8, alpha=0),
             90: RGBA(red=0.8, green=0.8, blue=0.8, alpha=0),
         }
-
+        self.kernel.copy_volume(self.array_img)
         return self
 
     def set_direction(self, dir_x, dir_y, dir_z):
@@ -99,7 +99,7 @@ class Falcon:
         self.bounding_box.xMax = self.dimension[0]
         self.bounding_box.yMax = self.dimension[1]
         self.bounding_box.zMax = self.dimension[2]
-
+        self.kernel.set_bounding_box(self.bounding_box)
         return self.kernel.render(width, height, self.offset_x, self.offset_y, self.scale, False, self.background_color)
 
     def get_vr_b64png(self, width: int, height: int):

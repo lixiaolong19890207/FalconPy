@@ -20,6 +20,7 @@ typedef struct {
 } VOI;
 
 __constant__ float const_transform_matrix[9];
+__constant__ cudaTextureObject_t constTransferFuncText;
 cudaArray* d_volume_array = 0;
 
 unsigned char* p_vr = 0;
