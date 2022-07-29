@@ -1,3 +1,4 @@
+import ctypes
 from typing import Dict
 
 import SimpleITK as sitk
@@ -100,7 +101,7 @@ class Falcon:
         self.bounding_box.yMax = self.dimension[1]
         self.bounding_box.zMax = self.dimension[2]
         self.kernel.set_bounding_box(self.bounding_box)
-        return self.kernel.render(width, height, self.offset_x, self.offset_y, self.scale, False, self.background_color)
+        return self.kernel.render(width, height, self.offset_x, self.offset_y, self.scale, ctypes.c_bool(False), self.background_color)
 
     def get_vr_b64png(self, width: int, height: int):
         data = self.get_vr_data(width, height)

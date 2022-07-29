@@ -19,6 +19,7 @@ DEVICE_ID = findCudaDevice()
 
 class Kernel:
     def __init__(self):
+        self.bounding_box = None
         self.width_vr = 0
         self.height_vr = 0
         self.h_spacing = cudart.make_cudaPos(0, 0, 0)
@@ -71,9 +72,9 @@ class Kernel:
         volume_array = volume_array.astype(np.int16)
 
         shape = volume_array.shape
-        self.h_dims_extent.width = shape[0]
-        self.h_dims_extent.height = shape[1]
-        self.h_dims_extent.depth = shape[2]
+        self.h_dims_extent.width = shape[1]
+        self.h_dims_extent.height = shape[2]
+        self.h_dims_extent.depth = shape[0]
 
         if self.d_volume_array:
             # checkCudaErrors(cudart.cudaFreeArray(self.d_volume_array))
@@ -81,9 +82,8 @@ class Kernel:
             self.h_volume_text_obj = None
 
         channel_desc = checkCudaErrors(
-            cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
-        self.d_volume_array = checkCudaErrors(
-            cudart.cudaMalloc3DArray(channel_desc, self.h_dims_extent, cudart.cudaArrayCubemap))
+            cudart.cudaCreateChannelDesc(np.dtype(np.int16).itemsize * 8, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindSigned))
+        self.d_volume_array = checkCudaErrors(cudart.cudaMalloc3DArray(channel_desc, self.h_dims_extent, cudart.cudaArrayDefault))
 
         memcpy_params = cudart.cudaMemcpy3DParms()
         memcpy_params.srcPos = cudart.make_cudaPos(0, 0, 0)
@@ -177,15 +177,15 @@ class Kernel:
         kernel_args = (
             (
                 self.d_volume_image, self.h_volume_text_obj,
-                width, height, x_pan, y_pan, scale,
+                ctypes.c_int(width), ctypes.c_int(height), ctypes.c_float(x_pan), ctypes.c_float(y_pan), ctypes.c_float(scale),
                 self.h_max_per, self.h_spacing, self.h_normal,
-                self.bounding_box, self.h_dims_extent, invert_z, color
+                self.bounding_box, self.h_dims_extent, invert_z
             ),
             (
                 None, None,
                 ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float,
                 None, None, None,
-                None, None, False, None
+                None, None, ctypes.c_bool
             )
         )
 
@@ -197,11 +197,11 @@ class Kernel:
             kernel_args, 0
         ))
 
-        h_volume_image = np.empty_like(self.d_volume_image)
+        h_volume_image = np.empty(np.dtype(np.int8).itemsize * self.width_vr * self.height_vr * 3, dtype='int8')
         checkCudaErrors(cuda.cuMemcpyDtoH(
             h_volume_image,
             self.d_volume_image,
-            self.d_volume_image.itemsize * self.d_volume_image.size
+            np.dtype(np.int8).itemsize * self.width_vr * self.height_vr * 3
         ))
 
         return h_volume_image
