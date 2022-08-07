@@ -7,7 +7,7 @@ from core.falcon import Falcon
 
 CUR_PATH = Path(__file__).resolve().parent
 DATA_PATH = CUR_PATH / 'data'
-LUNG_PATH = DATA_PATH / 'ct_lung.original.nrrd'
+LUNG_PATH = DATA_PATH / 'archcta.original.nrrd'
 
 
 def test_load_volumes():

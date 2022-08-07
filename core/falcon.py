@@ -113,6 +113,7 @@ class Falcon:
     def get_vr_b64png(self, width: int, height: int):
         data = self.get_vr_data(width, height)
         data = data.reshape(512, 512, 3)
+        print(f'vr data.min(): {data.min()}, data.max(): {data.max()}')
         success, encoded = fpng.encode_image_to_memory(data)
         if not success:
             return None
