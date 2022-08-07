@@ -180,6 +180,8 @@ __global__ void cu_render(
 // 	float4 f4ColorBG
 )
 {
+    if (threadIdx.x == 0)
+        printf("Hello thread %d\n", threadIdx.x) ;
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
