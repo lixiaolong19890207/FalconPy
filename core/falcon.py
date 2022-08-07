@@ -12,6 +12,7 @@ from core.direction import Direction3
 from core.enums import PlaneType, ShadingType
 from core.gpu import Kernel
 from core.point import Point3
+from core.transfer_func import TransferFunc
 
 
 class Falcon:
@@ -80,7 +81,11 @@ class Falcon:
         pass
 
     def set_transfer_function(self, func: Dict[int, RGBA]):
-        self.kernel.copy_transfer_function(func)
+        tf = TransferFunc()
+        tf.set_control_pts(func)
+        fun = tf.get_transfer_func()
+
+        self.kernel.copy_transfer_function(fun)
 
     def set_background_color(self, clr: RGBA):
         self.background_color.red = clr.red

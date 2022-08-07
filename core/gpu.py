@@ -118,11 +118,21 @@ class Kernel:
             self.d_transform_matrix, transform_matrix, self.d_transform_matrix_size
         ))
 
-    def copy_transfer_function(self, transfer_func, label):
+    def copy_transfer_function(self, transfer_func):
 
-        if self.d_transfer_func_array:
-            checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
-            self.d_transfer_func_array = None
+        # if self.d_transfer_func_array:
+            # checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
+            # self.d_transfer_func_array = None
+
+        size = np.float32().itemsize * transfer_func.size
+
+        channel_desc = checkCudaErrors(cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
+        # if self.d_transfer_func_array:
+        #     checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
+        #     self.d_transfer_func_array = None
+
+        self.d_transfer_func_array = checkCudaErrors(
+            cudart.cudaMallocArray(channel_desc, size, 0, 0))
 
         tex_res = cudart.cudaResourceDesc()
         tex_res.resType = cudart.cudaResourceType.cudaResourceTypeArray
@@ -134,14 +144,6 @@ class Kernel:
         tex_descr.addressMode[0] = cudart.cudaTextureAddressMode.cudaAddressModeClamp
         tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeElementType
 
-        channel_desc = checkCudaErrors(cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
-        if self.d_transfer_func_array:
-            checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
-            self.d_transfer_func_array = None
-
-        self.d_transfer_func_array = checkCudaErrors(
-            cudart.cudaMallocArray(channel_desc, 888, 0, 0))
-
         checkCudaErrors(cudart.cudaMemcpy2DToArray(
             self.d_transfer_func_array, 0, 0, transfer_func, size, size, 1,
             cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
@@ -150,7 +152,7 @@ class Kernel:
         self.transferFuncText = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
 
         checkCudaErrors(cuda.cuMemcpyHtoD(
-            self.d_const_transfer_func_text, self.transferFuncText, constTransferFuncTexts_size
+            self.d_const_transfer_func_text, self.transferFuncText.getPtr(), self.d_const_transfer_func_text_size
         ))
 
     def render(self, width, height, x_pan, y_pan, scale, invert_z, color):

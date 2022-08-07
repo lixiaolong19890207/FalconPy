@@ -203,10 +203,7 @@ __global__ void cu_render(
 		float temp = 0.0f;
 		float3 pos;
 
-// 		float alphaAccObject[MAXOBJECTCOUNT+1];
-// 		for (int i=0; i<MAXOBJECTCOUNT+1; i++){
-// 			alphaAccObject[i] = 0.0f;
-// 		}
+		float alphaAccObject = 0.0f;
 		float alphaAcc = 0.0f;
 
 		float accuLength = 0.0f;
@@ -220,7 +217,7 @@ __global__ void cu_render(
 		float fAlphaPre = 0.0f;
 
 		unsigned char label = 0;
-		float3 alphawwwl = make_float3(0.0f, 400.0f, 40.0f);
+		float3 alphawwwl = make_float3(0.0f, 500.0f, 250.0f);
 
 		while (accuLength < 1.732)
 		{
@@ -245,7 +242,7 @@ __global__ void cu_render(
 			}
 			label = 0;
 
-// 			alphawwwl = constAlphaAndWWWL[label];
+			alphawwwl = alphawwwl;
 
 			temp = 32768*tex3D<float>(volumeText, pos.x, pos.y, pos.z);
 			temp = (temp - alphawwwl.z)/alphawwwl.y + 0.5;
@@ -265,8 +262,9 @@ __global__ void cu_render(
 
 			col.w = fAlphaTemp;
 
-			if (col.w > 0.0005f){
+			if (col.w > 0.0005f && alphaAccObject < alphawwwl.x){
 				sum = tracing(sum, alphaAcc, volumeText, pos, col, dirLight, f3Nor, invertZ);
+				alphaAccObject += (1.0f - alphaAcc) * col.w;
 				alphaAcc += (1.0f - alphaAcc) * col.w;
 			}
 

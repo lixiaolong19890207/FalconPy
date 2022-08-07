@@ -6,13 +6,13 @@ from sympy import Point3D
 
 
 class RGB(BaseModel):
-    red: Union[int, float] = 0.0
-    green: Union[int, float] = 0.0
-    blue: Union[int, float] = 0.0
+    red: Union[float] = 0.0
+    green: Union[float] = 0.0
+    blue: Union[float] = 0.0
 
 
 class RGBA(RGB):
-    alpha: Union[int, float] = 0.0
+    alpha: Union[float] = 0.0
 
 
 class BoundingBox(ctypes.Structure):

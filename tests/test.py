@@ -163,6 +163,41 @@ def test_char_ptr(kernel_helper):
     pass
 
 
+def test_text_object(kernel_helper):
+    transfer_func = np.identity(3).astype(dtype=np.float32)
+    d_ptr, d_size = kernel_helper.getGlobal(b'constTransferFuncText')
+
+    channel_desc = checkCudaErrors(
+        cudart.cudaCreateChannelDesc(32, 0, 0, 0, cudart.cudaChannelFormatKind.cudaChannelFormatKindFloat))
+    # if self.d_transfer_func_array:
+    #     checkCudaErrors(cudart.cudaFreeArray(self.d_transfer_func_array))
+    #     self.d_transfer_func_array = None
+
+    d_transfer_func_array = checkCudaErrors(
+        cudart.cudaMallocArray(channel_desc, d_size, 0, 0))
+
+    tex_res = cudart.cudaResourceDesc()
+    tex_res.resType = cudart.cudaResourceType.cudaResourceTypeArray
+    tex_res.res.array.array = d_transfer_func_array
+
+    tex_descr = cudart.cudaTextureDesc()
+    tex_descr.normalizedCoords = True
+    tex_descr.filterMode = cudart.cudaTextureFilterMode.cudaFilterModeLinear
+    tex_descr.addressMode[0] = cudart.cudaTextureAddressMode.cudaAddressModeClamp
+    tex_descr.readMode = cudart.cudaTextureReadMode.cudaReadModeElementType
+
+    checkCudaErrors(cudart.cudaMemcpy2DToArray(
+        d_transfer_func_array, 0, 0, transfer_func, 0, d_size, 1,
+        cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
+    ))
+
+    transferFuncText = checkCudaErrors(cudart.cudaCreateTextureObject(tex_res, tex_descr, None))
+
+    checkCudaErrors(cuda.cuMemcpyHtoD(
+        d_ptr, transferFuncText.getPtr(), d_size
+    ))
+
+
 def test_cudaArray(kernel_helper):
     pass
 
@@ -188,6 +223,7 @@ def main():
     test_float3(kernel_helper)
     test_cuda_extent(kernel_helper)
     test_char_ptr(kernel_helper)
+    test_text_object(kernel_helper)
 
     print('Test Finished')
 

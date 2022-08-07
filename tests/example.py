@@ -28,6 +28,15 @@ def test_load_volumes():
 
     falcon = Falcon()
     falcon.load_volume(str(LUNG_PATH))
+
+    pos_to_rgba = {
+        0: RGBA(red=0.8, green=0, blue=0, alpha=0),
+        10: RGBA(red=0.8, green=0, blue=0, alpha=0.3),
+        40: RGBA(red=0.8, green=0.8, blue=0, alpha=0),
+        99: RGBA(red=1.0, green=0.8, blue=1.0, alpha=1.0)
+    }
+
+    falcon.set_transfer_function(pos_to_rgba)
     b64png = falcon.get_vr_b64png(512, 512)
     pass
 
