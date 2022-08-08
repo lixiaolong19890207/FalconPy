@@ -13,8 +13,8 @@ cudaArray* d_volume_array = 0;
 typedef unsigned uint;
 typedef struct {
     int xMin;
-    int yMin;
     int xMax;
+    int yMin;
     int yMax;
     int zMin;
     int zMax;
@@ -237,6 +237,12 @@ __global__ void cu_render(
 			nxIdx = pos.x * volumeSize.width;
 			nyIdx = pos.y * volumeSize.height;
 			nzIdx = pos.z * volumeSize.depth;
+// 			if (x == 0 && y == 0)
+// 			{
+// 	            printf("Hello nxIdx: %d, nyIdx: %d, nzIdx: %d, accuLength: %f\n", nxIdx, nyIdx, nzIdx, accuLength);
+//                 printf("Hello xMin: %d, xMax: %d, yMin: %d, yMax: %d, zMin: %d, zMax: %d\n", box.xMin, box.xMax, box.yMin, box.yMax, box.zMin, box.zMax);
+// 			}
+
 			if (nxIdx<box.xMin || nxIdx>box.xMax || nyIdx<box.yMin || nyIdx>box.yMax || nzIdx<box.zMin || nzIdx>box.zMax)
 			{
 				accuLength += fStepTemp;
@@ -264,7 +270,19 @@ __global__ void cu_render(
 
 			col.w = fAlphaTemp;
 
-			if (col.w > 0.0005f && alphaAccObject < alphawwwl.x){
+            if (x == 0 && y == 0)
+            {
+                printf("\nHello sum, x: %f, y: %f, z: %f, w: %f\n", sum.x, sum.y, sum.z, sum.w);
+                printf("Hello color, x: %f, y: %f, z: %f, w: %f\n", col.x, col.y, col.z, col.w);
+                printf("Hello pos, x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+                printf("Hello alphawwwl, x: %f, y: %f, z: %f\n", alphawwwl.x, alphawwwl.y, alphawwwl.z);
+                printf("Hello alphaAcc: %f\n", alphaAcc);
+                printf("Hello accuLength: %f\n", accuLength);
+                printf("Hello alphaAccObject: %f\n", alphaAccObject);
+            }
+
+			if (col.w > 0.0005f && alphaAccObject < alphawwwl.x)
+			{
 				sum = tracing(sum, alphaAcc, volumeText, pos, col, dirLight, f3Nor, invertZ);
 				alphaAccObject += (1.0f - alphaAcc) * col.w;
 				alphaAcc += (1.0f - alphaAcc) * col.w;
@@ -277,7 +295,7 @@ __global__ void cu_render(
 		}
 
 		if (sum.x==0.0f && sum.y==0.0f && sum.z==0.0f && sum.w==0.0f){
-			sum = make_float4(0.8f, 0.8f, 0.8f, 0);;
+			sum = make_float4(0.8f, 0.8f, 0.8f, 0);
 		}
 
 		unsigned int result = rgba_float_to_int(sum);
