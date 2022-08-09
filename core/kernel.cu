@@ -20,6 +20,12 @@ typedef struct {
     int zMax;
 } BoundingBox;
 
+typedef struct {
+    float x;
+    float y;
+    float z;
+} Float3;
+
 
 inline __host__ __device__ float dot(float3 a, float3 b)
 {
@@ -87,7 +93,7 @@ __device__ float4 tracing(
 	float3 pos,
 	float4 col,
 	float3 dirLight,
-	float3 f3Nor,
+	Float3 f3Nor,
 	bool invertZ
 )
 {
@@ -171,19 +177,25 @@ __global__ void cu_render(
 	float xTranslate,
 	float yTranslate,
 	float scale,
-	float3 f3maxper,
-	float3 f3Spacing,
-	float3 f3Nor,
+	Float3 f3maxper,
+	Float3 f3Spacing,
+	Float3 f3Nor,
 	BoundingBox box,
 	cudaExtent volumeSize,
 	bool invertZ
 // 	float4 f4ColorBG
 )
 {
-    if (threadIdx.x == 0)
-        printf("Hello thread %d\n", threadIdx.x) ;
+//     if (threadIdx.x == 0)
+//         printf("Hello thread %d\n", threadIdx.x) ;
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    bool val = x == 50 && y == 100;
+    if (val)
+    {
+        printf("Hello f3maxper, x: %f, y: %f, z: %f\n", f3maxper.x, f3maxper.y, f3maxper.z);
+    }
 
 	if ((x >= 0) && (x < width) && (y >= 0) && (y < height))
 	{
@@ -195,7 +207,7 @@ __global__ void cu_render(
 		float4 sum = make_float4(0.0f,0.0f,0.0f,0.0f);
 
 		float3 dirLight = make_float3(0.0f, 1.0f, 0.0f);
-		dirLight = normalize(mul(const_transform_matrix, dirLight));
+// 		dirLight = normalize(mul(const_transform_matrix, dirLight));
 
 		float fStepL1 = 1.0f/volumeSize.depth;
 		float fStepL4 = fStepL1/4.0f;
@@ -219,29 +231,42 @@ __global__ void cu_render(
 		float fAlphaPre = 0.0f;
 
 		unsigned char label = 0;
-		float3 alphawwwl = make_float3(0.0f, 500.0f, 250.0f);
+		float3 alphawwwl = make_float3(0.0f, 0.0f, 0.0f);
+        const float3 constAlphaAndWWWL = make_float3(.0f, 500.0f, 250.0f);
 
 		while (accuLength < 1.732)
 		{
 			fy = (accuLength-0.866)*scale;
 
 			pos = make_float3(u, fy, v);
-			pos = mul(const_transform_matrix, pos);
-
+			if (val)
+            {
+                printf("\nHello pos, x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+            }
+// 			pos = mul(const_transform_matrix, pos);
+			if (val)
+            {
+                printf("Hello pos2, x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+            }
 			pos.x = pos.x * f3maxper.x + 0.5f;
 			pos.y = pos.y * f3maxper.y + 0.5f;
 			pos.z = pos.z * f3maxper.z + 0.5f;
 			if (invertZ)
 				pos.z = 1.0f - pos.z;
 
+			if (val)
+            {
+                printf("Hello pos3, x: %f, y: %f, z: %f\n", pos.x, pos.y, pos.z);
+            }
+
 			nxIdx = pos.x * volumeSize.width;
 			nyIdx = pos.y * volumeSize.height;
 			nzIdx = pos.z * volumeSize.depth;
-// 			if (x == 0 && y == 0)
-// 			{
-// 	            printf("Hello nxIdx: %d, nyIdx: %d, nzIdx: %d, accuLength: %f\n", nxIdx, nyIdx, nzIdx, accuLength);
-//                 printf("Hello xMin: %d, xMax: %d, yMin: %d, yMax: %d, zMin: %d, zMax: %d\n", box.xMin, box.xMax, box.yMin, box.yMax, box.zMin, box.zMax);
-// 			}
+			if (val)
+			{
+	            printf("Hello nxIdx: %d, nyIdx: %d, nzIdx: %d, accuLength: %f\n", nxIdx, nyIdx, nzIdx, accuLength);
+                printf("Hello xMin: %d, xMax: %d, yMin: %d, yMax: %d, zMin: %d, zMax: %d\n", box.xMin, box.xMax, box.yMin, box.yMax, box.zMin, box.zMax);
+			}
 
 			if (nxIdx<box.xMin || nxIdx>box.xMax || nyIdx<box.yMin || nyIdx>box.yMax || nzIdx<box.zMin || nzIdx>box.zMax)
 			{
@@ -250,10 +275,15 @@ __global__ void cu_render(
 			}
 			label = 0;
 
-			alphawwwl = alphawwwl;
+			alphawwwl = constAlphaAndWWWL;
 
 			temp = 32768*tex3D<float>(volumeText, pos.x, pos.y, pos.z);
 			temp = (temp - alphawwwl.z)/alphawwwl.y + 0.5;
+			if (val)
+			{
+	            printf("Hello temp: %f\n", temp);
+			}
+
 			if (temp>1)
 				temp = 1;
 
@@ -270,7 +300,7 @@ __global__ void cu_render(
 
 			col.w = fAlphaTemp;
 
-            if (x == 0 && y == 0)
+            if (val)
             {
                 printf("\nHello sum, x: %f, y: %f, z: %f, w: %f\n", sum.x, sum.y, sum.z, sum.w);
                 printf("Hello color, x: %f, y: %f, z: %f, w: %f\n", col.x, col.y, col.z, col.w);
@@ -295,7 +325,7 @@ __global__ void cu_render(
 		}
 
 		if (sum.x==0.0f && sum.y==0.0f && sum.z==0.0f && sum.w==0.0f){
-			sum = make_float4(0.8f, 0.8f, 0.8f, 0);
+			sum = make_float4(0.0f, 0.1f, 0.1f, 1.0f);
 		}
 
 		unsigned int result = rgba_float_to_int(sum);

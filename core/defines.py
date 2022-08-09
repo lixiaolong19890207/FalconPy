@@ -26,6 +26,14 @@ class BoundingBox(ctypes.Structure):
     ]
 
 
+class Float3(ctypes.Structure):
+    _fields_ = [
+        ('x', ctypes.c_float),
+        ('y', ctypes.c_float),
+        ('z', ctypes.c_float),
+    ]
+
+
 class WWWL(BaseModel):
     ww: Union[int, float] = 0.0
     wl: Union[int, float] = 0.0

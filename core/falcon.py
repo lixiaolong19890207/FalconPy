@@ -78,7 +78,8 @@ class Falcon:
         return self
 
     def reset(self):
-        pass
+        spacing_x, spacing_y, spacing_z = self.spacing
+        self.kernel.reset(spacing_x, spacing_y, spacing_z)
 
     def set_transfer_function(self, func: Dict[int, RGBA]):
         tf = TransferFunc()

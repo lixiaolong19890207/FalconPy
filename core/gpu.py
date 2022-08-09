@@ -5,6 +5,7 @@ from pathlib import Path
 
 from cuda import cuda, cudart
 
+from core.defines import Float3
 from core.helper.common import KernelHelper
 from core.helper.helper_cuda import findCudaDevice, checkCudaErrors
 from core.point import Point3
@@ -22,9 +23,9 @@ class Kernel:
         self.bounding_box = None
         self.width_vr = 0
         self.height_vr = 0
-        self.h_spacing = cudart.make_cudaPos(0, 0, 0)
-        self.h_normal = cudart.make_cudaPos(0, 0, 0)
-        self.h_max_per = cudart.make_cudaPos(0, 0, 0)
+        self.h_spacing = Float3()
+        self.h_normal = Float3()
+        self.h_max_per = Float3()
 
         self.h_dims_extent = cudart.make_cudaExtent(0, 0, 0)
         self.h_volume_text_obj = None
@@ -49,8 +50,8 @@ class Kernel:
         self.width_vr = 0
         self.height_vr = 0
 
-        self.h_spacing = cudart.make_cudaPos(0, 0, 0)
-        self.h_normal = cudart.make_cudaPos(0, 0, 0)
+        self.h_spacing = Float3(spacing_x, spacing_y, spacing_z)
+        self.h_normal = Float3()
 
         self.h_normal.x = 1.0 / self.h_dims_extent.width
         self.h_normal.y = 1.0 / self.h_dims_extent.height
